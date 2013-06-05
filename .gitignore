@@ -1,0 +1,7 @@
+target/
+project/
+out/
+.idea/
+.idea_modules/
+.DS_Store
+.history
