@@ -1,11 +1,12 @@
 package pmarques
 
 import processing.core._
+import org.apache.commons.cli._
 
 /**
  * Represents a Wolfram 1D celular automata calculation interface.
  */
-trait Wolfram {
+trait WolframFactory {
   /**
    * Returns a grid containing a one dimensional celular automata according to Wolfram's rules.
    * See http://mathworld.wolfram.com/Rule30.html
@@ -21,7 +22,7 @@ trait Wolfram {
  * Concrete implementation of a celular automata generator.
  * Only one method is provided which returns an instance of a board for a number of generations.
  */
-object MyWolfram extends Wolfram {
+object MyWolfram extends WolframFactory {
   def createBoard(rule: Int, generations: Int): Array[Array[Char]] = {
     require(rule >= 0 && rule<=255)
     require(generations > 0)
@@ -58,9 +59,6 @@ class MyWolfram private(val rule: Int, val generations: Int) {
 
   //-----------------------------------------------------------------
 
-  /**
-   * @inheritdoc
-   */
   private def makeBoard(level: Int, previousLevels: List[Array[Char]]): List[Array[Char]] = level match {
     case 0 => makeBoard(1, Range(0, boardLength).map(i => if (i!=boardLength/2) '0' else '1').toArray :: Nil)
     case i if (i==generations) => previousLevels.reverse
@@ -89,15 +87,19 @@ class MyWolfram private(val rule: Int, val generations: Int) {
  * WolframApplet is a processing applet that allows to draw the evolution of an automata.
  */
 class WolframApplet extends PApplet {
-  private val rule = 30                   // The rule to simulate              -- TODO: remove this from being hardcoded
-  private val generations = 128           // Number of generations to simulate -- TODO: remove this from being hardcoded
-  private val side = 5                    // The size of each cell
-
-  private val ruleBoard = MyWolfram.createBoard(rule, generations)
+  private var generations: Int = _
+  private var side: Int = _
+  private var rule: Int = _
+  private var ruleBoard: Array[Array[Char]] = _
 
   //-----------------------------------------------------------------
 
-  override def setup {
+  override def setup(): Unit = {
+    rule = args(0).toInt
+    generations = args(1).toInt
+    side = args(2).toInt
+    ruleBoard = MyWolfram.createBoard(rule, generations)
+
     val maxX = (2*generations - 1)*side
     val maxY = generations*side
 
@@ -107,7 +109,7 @@ class WolframApplet extends PApplet {
     noLoop()
   }
 
-  override def draw {
+  override def draw(): Unit = {
     for (y <- 0 until generations; x <- 0 until (2*generations-1)) {
       ruleBoard(y)(x) match {
         case '0' => fill(255, 255, 255)
@@ -118,6 +120,66 @@ class WolframApplet extends PApplet {
   }
 }
 
-object Main extends App {
-  PApplet.main(Array("pmarques.WolframApplet"))
+object Wolfram {
+
+  /** Class for representing the command line options of the program.
+    *
+    * @param rule The rule to evaluate.
+    * @param generations Number of generations to run.
+    * @param side Size of each square in the plot
+    */
+  case class WolframOptions(rule: String = "30", generations: String = "100", side: String = "5")
+
+  /**
+   * Parse the command line arguments
+   * @param args The commmand line
+   * @return The arguments already parsed
+   */
+  def parseCommandLine(args: Array[String]): WolframOptions = {
+    val prgOptions = new Options
+    prgOptions.addOption("help", false, "help, prints this message")
+    prgOptions.addOption("rule", true, "rule number to use (default: 30)")
+    prgOptions.addOption("gen", true, "generations to run (default: 50)")
+    prgOptions.addOption("side", true, "side of each square in drawing (default: 5)")
+
+    val cmdOptions: CommandLine = try {
+      (new GnuParser).parse(prgOptions, args)
+    }
+    catch {
+      case optionException: UnrecognizedOptionException => {
+        System.err.println(optionException.getMessage)
+        (new HelpFormatter).printHelp("Wolfram", prgOptions, true)
+        sys.exit(0)
+      }
+    }
+
+    if (cmdOptions.getArgs.length != 0) {
+      System.err.println("Invalid option specified.")
+      (new HelpFormatter).printHelp("Wolfram", prgOptions, true)
+      sys.exit(0)
+    }
+
+    if (cmdOptions hasOption "help") {
+      (new HelpFormatter).printHelp("Wolfram", prgOptions, true)
+      sys.exit(0)
+    }
+
+    // Parse all the options into an object by using foldLeft and copying the options one by one
+    (WolframOptions() /: cmdOptions.getOptions) { (tstOptions: WolframOptions, current: Option) =>
+      current.getOpt match {
+        case "rule"     => tstOptions.copy(rule = current.getValue)
+        case "gen"      => tstOptions.copy(generations = current.getValue)
+        case "side"     => tstOptions.copy(side = current.getValue)
+      }
+    }
+  }
+
+  /**
+   * Program's main entry point
+   * @param args Command line arguments
+   */
+  def main(args: Array[String]): Unit = {
+    val options = parseCommandLine(args)
+    PApplet.main(Array("pmarques.WolframApplet", options.rule, options.generations, options.side))
+  }
 }

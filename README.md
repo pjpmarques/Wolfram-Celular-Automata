@@ -29,7 +29,4 @@ The project is built and run using SBT ([Scala Build Tool](http://www.scala-sbt.
 
 5. Run with `sbt run`
 
-
-TODO
-====
-- Change the program so that the automata rule to be run in not hardcoded in the applet.
+Several command line options are supported.
