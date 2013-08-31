@@ -7,6 +7,10 @@ import org.apache.commons.cli._
  * Represents a Wolfram 1D celular automata calculation interface.
  */
 trait WolframFactory {
+
+  /** A board is simply a two dim array (NxM) */
+  type Board = Array[Array[Char]]
+
   /**
    * Returns a grid containing a one dimensional celular automata according to Wolfram's rules.
    * See http://mathworld.wolfram.com/Rule30.html
@@ -15,7 +19,7 @@ trait WolframFactory {
    * @param generations Number of generations (>0) for which the automata runs.
    * @return a 2D grid containing the simulation. The cell is either '0' or '1' and the grid size will be generations X generations.
    */
-  def createBoard(rule: Int, generations: Int): Array[Array[Char]]
+  def createBoard(rule: Int, generations: Int): Board
 }
 
 /**
@@ -23,7 +27,7 @@ trait WolframFactory {
  * Only one method is provided which returns an instance of a board for a number of generations.
  */
 object MyWolfram extends WolframFactory {
-  def createBoard(rule: Int, generations: Int): Array[Array[Char]] = {
+  def createBoard(rule: Int, generations: Int): Board = {
     require(rule >= 0 && rule<=255)
     require(generations > 0)
 
@@ -41,7 +45,7 @@ object MyWolfram extends WolframFactory {
 class MyWolfram private(val rule: Int, val generations: Int) {
   val boardLength = generations*2 - 1
 
-  lazy val board: Array[Array[Char]] = makeBoard(0, Nil).toArray
+  lazy val board: WolframFactory#Board = makeBoard(0, Nil).toArray
 
   //-----------------------------------------------------------------
 
@@ -90,7 +94,7 @@ class WolframApplet extends PApplet {
   private var generations: Int = _
   private var side: Int = _
   private var rule: Int = _
-  private var ruleBoard: Array[Array[Char]] = _
+  private var ruleBoard: WolframFactory#Board = _
 
   //-----------------------------------------------------------------
 
